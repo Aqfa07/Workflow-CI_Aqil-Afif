@@ -89,19 +89,20 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       # ── 8. Verifikasi Model Lokal & Build Docker Image ─────────────────────
-      - name: 🏗️ Build Docker Image with MLflow
+      - name: 🏗️ Build Docker Image (Custom Dockerfile)
         working-directory: ./MLProject
         run: |
-          # Model sudah tersedia di ./model/ yang dibuat langsung oleh modelling_tuning.py
-          # sehingga tidak perlu download dari DagsHub artifact store.
+          # Verifikasi model tersedia
           if [ ! -f "model/MLmodel" ]; then
             echo "ERROR: ./model/MLmodel not found! Training may have failed."
             ls -la model/ || echo "model/ directory does not exist"
             exit 1
           fi
           echo "Model found at ./model/"
-          echo "Building Docker image..."
-          mlflow models build-docker -m "./model" -n ${{ env.IMAGE_NAME }}:latest --enable-mlserver
+          echo "Building Docker image with custom Dockerfile..."
+          # Menggunakan custom Dockerfile (python:3.10-slim) untuk menghindari
+          # timeout saat mlflow build-docker mencoba install via PPA deadsnakes.
+          docker build -t ${{ env.IMAGE_NAME }}:latest .
 
       # ── 9. Push Docker Image ke Docker Hub ───────────────────────────────────
       - name: 🚀 Push Docker Image to Docker Hub
