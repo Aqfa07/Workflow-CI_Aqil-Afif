@@ -47,13 +47,14 @@ jobs:
           pip install -r requirements.txt
           pip install mlflow dagshub
 
-      # ── 4. Menjalankan Training & Tuning ────────────────────────────────────
-      - name: 🚀 Run Model Training
+      # ── 4. Menjalankan Training & Tuning via mlflow run ────────────────────
+      - name: 🚀 Run MLflow Project (mlflow run)
         working-directory: ./MLProject
         run: |
-          # Menjalankan script Python secara langsung agar file model & run_id.txt
-          # tersimpan di direktori kerja (workspace) GitHub Actions saat ini.
-          python modelling_tuning.py
+          # Wajib menggunakan mlflow run agar seluruh proses eksperimen,
+          # dependensi, dan environment tercatat sesuai standar MLflow Project.
+          # --env-manager=local agar tidak membutuhkan conda di CI/CD runner.
+          mlflow run . --env-manager=local
 
       # ── 5. Ambil Run ID dari file run_id.txt ────────────────────────────────
       - name: 🔍 Get Best Run ID
