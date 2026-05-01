@@ -88,7 +88,7 @@ jobs:
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # ── 8. Verifikasi Model Lokal & Build Docker Image ─────────────────────
+      # ── 8. Verifikasi Model & Build Docker Image ───────────────────────────
       - name: 🏗️ Build Docker Image (Custom Dockerfile)
         working-directory: ./MLProject
         run: |
@@ -99,9 +99,24 @@ jobs:
             exit 1
           fi
           echo "Model found at ./model/"
-          echo "Building Docker image with custom Dockerfile..."
-          # Menggunakan custom Dockerfile (python:3.10-slim) untuk menghindari
-          # timeout saat mlflow build-docker mencoba install via PPA deadsnakes.
+
+          # Generate Dockerfile secara dinamis via printf (menghindari leading
+          # whitespace dari heredoc YAML). Menggunakan python:3.10-slim agar
+          # tidak ada PPA deadsnakes timeout seperti pada mlflow build-docker.
+          printf '%s\n' \
+            'FROM python:3.10-slim' \
+            'WORKDIR /app' \
+            'RUN apt-get update && apt-get install -y --no-install-recommends gcc g++ && rm -rf /var/lib/apt/lists/*' \
+            'COPY model/ /app/model/' \
+            'RUN pip install --no-cache-dir mlflow>=2.4.0 scikit-learn>=1.2.0 pandas>=1.5.0 numpy>=1.23.0 uvicorn>=0.20.0' \
+            'EXPOSE 8080' \
+            'CMD ["mlflow","models","serve","-m","/app/model","--host","0.0.0.0","--port","8080","--no-conda"]' \
+            > Dockerfile
+
+          echo "=== Dockerfile yang akan digunakan ==="
+          cat Dockerfile
+          echo "======================================"
+          echo "Building Docker image..."
           docker build -t ${{ env.IMAGE_NAME }}:latest .
 
       # ── 9. Push Docker Image ke Docker Hub ───────────────────────────────────
